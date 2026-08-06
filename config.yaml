@@ -1,0 +1,7 @@
+1kgp_base_url: https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502
+sgdp_base_url: https://sharehost.hms.harvard.edu/genetics/reich_lab/sgdp/phased_data2021
+recomb_map_base_url: https://bochet.gcc.biostat.washington.edu/beagle/genetic_maps
+ancestral_allele_url: https://ftp.ensembl.org/pub/release-75/variation/vcf/homo_sapiens/Homo_sapiens.vcf.gz
+
+chrom:
+  20
