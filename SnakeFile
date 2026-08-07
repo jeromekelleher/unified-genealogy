@@ -1,0 +1,189 @@
+import pathlib
+
+import steps
+
+
+configfile: "config.yaml"
+
+
+data_dir = pathlib.Path("data")
+
+
+rule all:
+    input:
+        expand(data_dir / "tgp_chr{chrom}.vcz", chrom=config["chrom"]),
+        expand(data_dir / "sgdp_chr{chrom}.vcz", chrom=config["chrom"]),
+        expand(
+            data_dir / "ancestral_alleles_chr{chrom}.vcz",
+            chrom=config["chrom"],
+        ),
+        data_dir / "plink.GRCh37.map.zip",
+
+
+rule download_tgp_vcf:
+    output:
+        data_dir
+        / (
+            "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
+            "20130502.genotypes.vcf.gz"
+        ),
+    params:
+        base_url=config["tgp_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule download_tgp_index:
+    output:
+        data_dir
+        / (
+            "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
+            "20130502.genotypes.vcf.gz.tbi"
+        ),
+    params:
+        base_url=config["tgp_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule download_sgdp_bcf:
+    output:
+        data_dir / "chr.sgdp.pub.{chrom}.bcf",
+    params:
+        base_url=config["sgdp_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule download_sgdp_index:
+    output:
+        data_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
+    params:
+        base_url=config["sgdp_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule download_ancestral_alleles:
+    output:
+        data_dir / "homo_sapiens-chr{chrom}.vcf.gz",
+    params:
+        base_url=config["ancestral_allele_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule bgzip_ancestral_alleles:
+    input:
+        data_dir / "homo_sapiens-chr{chrom}.vcf.gz",
+    output:
+        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+    run:
+        steps.bgzip(input[0], output[0])
+
+
+rule index_ancestral_alleles:
+    input:
+        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+    output:
+        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
+    run:
+        steps.index_vcf(input[0])
+
+
+rule download_recombination_maps:
+    output:
+        data_dir / "plink.GRCh37.map.zip",
+    params:
+        base_url=config["recomb_map_base_url"],
+    run:
+        filename = pathlib.Path(output[0]).name
+        url = f"{params.base_url}/{filename}"
+        steps.download(url, output[0])
+
+
+rule explode_tgp:
+    input:
+        vcf=data_dir
+        / (
+            "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
+            "20130502.genotypes.vcf.gz"
+        ),
+        index=data_dir
+        / (
+            "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
+            "20130502.genotypes.vcf.gz.tbi"
+        ),
+    output:
+        directory(data_dir / "tgp_chr{chrom}.icf"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.explode(input.vcf, output[0], threads)
+
+
+rule encode_tgp:
+    input:
+        data_dir / "tgp_chr{chrom}.icf",
+    output:
+        directory(data_dir / "tgp_chr{chrom}.vcz"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.encode(input[0], output[0], threads)
+
+
+rule explode_sgdp:
+    input:
+        bcf=data_dir / "chr.sgdp.pub.{chrom}.bcf",
+        index=data_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
+    output:
+        directory(data_dir / "sgdp_chr{chrom}.icf"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.explode(input.bcf, output[0], threads)
+
+
+rule encode_sgdp:
+    input:
+        data_dir / "sgdp_chr{chrom}.icf",
+    output:
+        directory(data_dir / "sgdp_chr{chrom}.vcz"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.encode(input[0], output[0], threads)
+
+
+rule explode_ancestral_alleles:
+    input:
+        vcf=data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+        index=data_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
+    output:
+        directory(data_dir / "ancestral_alleles_chr{chrom}.icf"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.explode(input.vcf, output[0], threads)
+
+
+rule encode_ancestral_alleles:
+    input:
+        data_dir / "ancestral_alleles_chr{chrom}.icf",
+    output:
+        directory(data_dir / "ancestral_alleles_chr{chrom}.vcz"),
+    threads:
+        config["worker_processes"]
+    run:
+        steps.encode(input[0], output[0], threads)

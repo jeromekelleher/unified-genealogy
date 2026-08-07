@@ -1,0 +1,10 @@
+*.pyc
+.coverage
+.pytest_cache/
+.snakemake/
+.uv_cache/
+.venv/
+__pycache__/
+data/
+htmlcov/
+.python-version

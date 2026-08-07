@@ -1,0 +1,11 @@
+[project]
+name = "unified-genealogy"
+version = "0.1.0"
+description = "Download and prepare inputs for unified genealogy inference"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "bio2zarr[vcf]==0.1.8",
+    "pysam",
+    "snakemake>=9",
+    "zarr==3.1.5",
+]

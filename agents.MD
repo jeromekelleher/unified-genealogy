@@ -17,7 +17,11 @@ just has to assemble everything needed.
 The snakemake architecture should take inspiration from
 https://github.com/benjeffery/tsinfer-snakemake/, although bear in mind this is
 for an old version of tsinfer. The organisation of a single Snakefile and
-steps.py with functions it calls should be in place here too. 
+steps.py with functions it calls should be in place here too. The filenames from
+all the different sources should be part of the Snakefile and not config (only
+the base URLs are needed there). For example, for 1000 Genomes (which you should
+refer as tgp for short) will have something like:
+    "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz"
 
 ## Git usage
 
@@ -27,9 +31,10 @@ steps.py with functions it calls should be in place here too.
 
 - Do not be overly defensive - defend only against circumstances that can
   occur within the current codebase.
+- Don't make constants in Python scripts: all should go in a config.
 - Do not make production code more complex for the sake of minimising 
   changes to the test suite. Simplicity and clarity of the production code 
-  is imperative.
+  is impera
 - Do not combine multiple complex operations in a single statement. Prefer
   to keep a single operation per statement, and use intermediate variables
   as a form of documentation. For example:
