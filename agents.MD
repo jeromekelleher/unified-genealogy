@@ -21,7 +21,7 @@ steps.py with functions it calls should be in place here too. The filenames from
 all the different sources should be part of the Snakefile and not config (only
 the base URLs are needed there). For example, for 1000 Genomes (which you should
 refer as tgp for short) will have something like:
-    "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz"
+"ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz"
 
 ## Git usage
 
@@ -62,6 +62,38 @@ refer as tgp for short) will have something like:
 - Zarr v3 is used (dependency: `zarr>=3`). Do not use Zarr v2 APIs.
 - Use PEP 604 union syntax: `int | None`, not `Optional[int]`.
 - One `logger = logging.getLogger(__name__)` per module at top level.
+- Use underscores with lower case for variable names in CSVs and for files and
+  folders except .agents, where you can use the - separation convention.
+- Prioritise semantic correctness, well-defined invariants, and clear error
+  handling over micro-optimizations or clever tricks.
+- Maintain inter-linked docstrings and use comments where they add context and
+  explanation, but avoid redundant or obvious comments that do not enhance
+  understanding.
+- Structure code to be modular, with coherent responsibilities, good separation
+  of concerns, and an architecture that can be extended without large-scale
+  rewrites.
+- Apply DRY carefully: factor out shared logic when it improves clarity and
+  maintenance, but avoid over-abstraction or generic frameworks that obscure
+  intent.
+- Use discernment and good judgement to write code that is correct,
+  maintainable, and efficient, while avoiding unnecessary complexity or
+  over-engineering.
+- Consider algorithmic time and memory complexity when choosing data structures
+  and approaches, especially for code on critical paths or large problem sizes.
+- Aim for readable, explicit code with simple control flow and minimal “magic”;
+  prefer straightforward implementations to compact but opaque idioms.
+- Keep implementations concise but not cryptic; remove dead or unused code and
+  avoid unnecessary indirection.
+- For tests, prefer simple, direct assertions that fail fast; test code should
+  not be defensive, over-general, or attempt to mask or recover from failures.
+- For APIs and function interfaces prefer defined contracts with clear error
+  states over flexible but loosely defined behavior that attempts to infer
+  intent or handle edge cases implicitly.
+- Where there is likely to be a long running process and it can be parallelised
+  use multiprocessing with queues to distribute work across all available CPU
+  cores.
+- Don't bend over backwards to make anything backwards compatible with previous
+  implementations.
 
 ## Tool use
 
@@ -70,25 +102,12 @@ refer as tgp for short) will have something like:
 ## Testing
 
 - Organise tests in classes, not flat functions. Use pytest fixtures for setup.
-- Test helpers are in `tests/helpers.py` (e.g., `make_sample_vcz`, `make_ancestor_vcz`)
-- `tests/algorithm.py` contains Python reference implementations used to verify C code
+- Test helpers are in `tests/helpers.py` (e.g., `make_sample_vcz`,
+  `make_ancestor_vcz`)
+- `tests/algorithm.py` contains Python reference implementations used to verify
+  C code
 - `msprime` is used to simulate test data
 - Run the test suite with coverage before committing to ensure that new code is
   fully covered by tests.
 
 
-## Coding style and quality
-
-- Use discernment and good judgement to write code that is correct, maintainable, and efficient, while avoiding unnecessary complexity or over-engineering.
-- Use underscores with lower case for variable names in CSVs and for files and folders except .agents, where you can use the - separation convention.
-- Prioritise semantic correctness, well-defined invariants, and clear error handling over micro-optimizations or clever tricks.
-- Maintain inter-linked docstrings and use comments where they add context and explanation, but avoid redundant or obvious comments that do not enhance understanding.
-- Structure code to be modular, with coherent responsibilities, good separation of concerns, and an architecture that can be extended without large-scale rewrites.
-- Apply DRY carefully: factor out shared logic when it improves clarity and maintenance, but avoid over-abstraction or generic frameworks that obscure intent.
-- Aim for readable, explicit code with simple control flow and minimal “magic”; prefer straightforward implementations to compact but opaque idioms.
-- Consider algorithmic time and memory complexity when choosing data structures and approaches, especially for code on critical paths or large problem sizes.
-- Keep implementations concise but not cryptic; remove dead or unused code and avoid unnecessary indirection.
-- For tests, prefer simple, direct assertions that fail fast; test code should not be defensive, over-general, or attempt to mask or recover from failures.
-- For APIs and function interfaces prefer defined contracts with clear error states over flexible but loosely defined behavior that attempts to infer intent or handle edge cases implicitly.
-- Where there is likely to be a long running process and it can be parallelised use multiprocessing with queues to distribute work across all available CPU cores.
-- Don't bend over backwards to make anything backwards compatible with previous implementations. 

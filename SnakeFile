@@ -7,22 +7,26 @@ configfile: "config.yaml"
 
 
 data_dir = pathlib.Path("data")
+vcf_dir = data_dir / "vcf"
+exploded_vcf_dir = data_dir / "exploded_vcfs"
+zarr_vcf_dir = data_dir / "zarr_vcfs"
+recombination_map_dir = data_dir / "recombination_maps"
 
 
 rule all:
     input:
-        expand(data_dir / "tgp_chr{chrom}.vcz", chrom=config["chrom"]),
-        expand(data_dir / "sgdp_chr{chrom}.vcz", chrom=config["chrom"]),
+        expand(zarr_vcf_dir / "tgp_chr{chrom}.vcz", chrom=config["chrom"]),
+        expand(zarr_vcf_dir / "sgdp_chr{chrom}.vcz", chrom=config["chrom"]),
         expand(
-            data_dir / "ancestral_alleles_chr{chrom}.vcz",
+            zarr_vcf_dir / "ancestral_alleles_chr{chrom}.vcz",
             chrom=config["chrom"],
         ),
-        data_dir / "plink.GRCh37.map.zip",
+        recombination_map_dir / "plink.GRCh37.map.zip",
 
 
 rule download_tgp_vcf:
     output:
-        data_dir
+        vcf_dir
         / (
             "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
             "20130502.genotypes.vcf.gz"
@@ -37,7 +41,7 @@ rule download_tgp_vcf:
 
 rule download_tgp_index:
     output:
-        data_dir
+        vcf_dir
         / (
             "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
             "20130502.genotypes.vcf.gz.tbi"
@@ -52,7 +56,7 @@ rule download_tgp_index:
 
 rule download_sgdp_bcf:
     output:
-        data_dir / "chr.sgdp.pub.{chrom}.bcf",
+        vcf_dir / "chr.sgdp.pub.{chrom}.bcf",
     params:
         base_url=config["sgdp_base_url"],
     run:
@@ -63,7 +67,7 @@ rule download_sgdp_bcf:
 
 rule download_sgdp_index:
     output:
-        data_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
+        vcf_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
     params:
         base_url=config["sgdp_base_url"],
     run:
@@ -74,7 +78,7 @@ rule download_sgdp_index:
 
 rule download_ancestral_alleles:
     output:
-        data_dir / "homo_sapiens-chr{chrom}.vcf.gz",
+        vcf_dir / "homo_sapiens-chr{chrom}.vcf.gz",
     params:
         base_url=config["ancestral_allele_base_url"],
     run:
@@ -85,25 +89,25 @@ rule download_ancestral_alleles:
 
 rule bgzip_ancestral_alleles:
     input:
-        data_dir / "homo_sapiens-chr{chrom}.vcf.gz",
+        vcf_dir / "homo_sapiens-chr{chrom}.vcf.gz",
     output:
-        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+        vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
     run:
         steps.bgzip(input[0], output[0])
 
 
 rule index_ancestral_alleles:
     input:
-        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+        vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
     output:
-        data_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
+        vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
     run:
         steps.index_vcf(input[0])
 
 
 rule download_recombination_maps:
     output:
-        data_dir / "plink.GRCh37.map.zip",
+        recombination_map_dir / "plink.GRCh37.map.zip",
     params:
         base_url=config["recomb_map_base_url"],
     run:
@@ -114,18 +118,18 @@ rule download_recombination_maps:
 
 rule explode_tgp:
     input:
-        vcf=data_dir
+        vcf=vcf_dir
         / (
             "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
             "20130502.genotypes.vcf.gz"
         ),
-        index=data_dir
+        index=vcf_dir
         / (
             "ALL.chr{chrom}.phase3_shapeit2_mvncall_integrated_v5b."
             "20130502.genotypes.vcf.gz.tbi"
         ),
     output:
-        directory(data_dir / "tgp_chr{chrom}.icf"),
+        directory(exploded_vcf_dir / "tgp_chr{chrom}.icf"),
     threads:
         config["worker_processes"]
     run:
@@ -134,9 +138,9 @@ rule explode_tgp:
 
 rule encode_tgp:
     input:
-        data_dir / "tgp_chr{chrom}.icf",
+        exploded_vcf_dir / "tgp_chr{chrom}.icf",
     output:
-        directory(data_dir / "tgp_chr{chrom}.vcz"),
+        directory(zarr_vcf_dir / "tgp_chr{chrom}.vcz"),
     threads:
         config["worker_processes"]
     run:
@@ -145,10 +149,10 @@ rule encode_tgp:
 
 rule explode_sgdp:
     input:
-        bcf=data_dir / "chr.sgdp.pub.{chrom}.bcf",
-        index=data_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
+        bcf=vcf_dir / "chr.sgdp.pub.{chrom}.bcf",
+        index=vcf_dir / "chr.sgdp.pub.{chrom}.bcf.csi",
     output:
-        directory(data_dir / "sgdp_chr{chrom}.icf"),
+        directory(exploded_vcf_dir / "sgdp_chr{chrom}.icf"),
     threads:
         config["worker_processes"]
     run:
@@ -157,9 +161,9 @@ rule explode_sgdp:
 
 rule encode_sgdp:
     input:
-        data_dir / "sgdp_chr{chrom}.icf",
+        exploded_vcf_dir / "sgdp_chr{chrom}.icf",
     output:
-        directory(data_dir / "sgdp_chr{chrom}.vcz"),
+        directory(zarr_vcf_dir / "sgdp_chr{chrom}.vcz"),
     threads:
         config["worker_processes"]
     run:
@@ -168,10 +172,10 @@ rule encode_sgdp:
 
 rule explode_ancestral_alleles:
     input:
-        vcf=data_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
-        index=data_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
+        vcf=vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
+        index=vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz.tbi",
     output:
-        directory(data_dir / "ancestral_alleles_chr{chrom}.icf"),
+        directory(exploded_vcf_dir / "ancestral_alleles_chr{chrom}.icf"),
     threads:
         config["worker_processes"]
     run:
@@ -180,9 +184,9 @@ rule explode_ancestral_alleles:
 
 rule encode_ancestral_alleles:
     input:
-        data_dir / "ancestral_alleles_chr{chrom}.icf",
+        exploded_vcf_dir / "ancestral_alleles_chr{chrom}.icf",
     output:
-        directory(data_dir / "ancestral_alleles_chr{chrom}.vcz"),
+        directory(zarr_vcf_dir / "ancestral_alleles_chr{chrom}.vcz"),
     threads:
         config["worker_processes"]
     run:
