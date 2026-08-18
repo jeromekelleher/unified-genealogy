@@ -10,7 +10,7 @@ data_dir = pathlib.Path("data")
 vcf_dir = data_dir / "vcf"
 exploded_vcf_dir = data_dir / "exploded_vcfs"
 zarr_vcf_dir = data_dir / "zarr_vcfs"
-recombination_map_dir = data_dir / "recombination_maps"
+recombination_map_dir = data_dir / "recomb_map"
 
 
 rule all:
@@ -105,7 +105,7 @@ rule index_ancestral_alleles:
         steps.index_vcf(input[0])
 
 
-rule download_recombination_maps:
+rule download_recomb_map:
     output:
         recombination_map_dir / "plink.GRCh37.map.zip",
     params:
