@@ -99,15 +99,4 @@ refer as tgp for short) will have something like:
 
 - Use `uv run` for all Python tooling (never bare `python -m`)
 
-## Testing
-
-- Organise tests in classes, not flat functions. Use pytest fixtures for setup.
-- Test helpers are in `tests/helpers.py` (e.g., `make_sample_vcz`,
-  `make_ancestor_vcz`)
-- `tests/algorithm.py` contains Python reference implementations used to verify
-  C code
-- `msprime` is used to simulate test data
-- Run the test suite with coverage before committing to ensure that new code is
-  fully covered by tests.
-
 
