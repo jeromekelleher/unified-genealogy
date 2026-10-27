@@ -13,6 +13,11 @@ zarr_vcf_dir = data_dir / "zarr_vcfs"
 recombination_map_dir = data_dir / "recomb_map"
 
 
+wildcard_constraints:
+    dataset="tgp|sgdp|ancestral_alleles",
+    chrom=r"\d+",
+
+
 rule all:
     input:
         expand(zarr_vcf_dir / "tgp_chr{chrom}.vcz", chrom=config["chrom"]),
@@ -87,13 +92,13 @@ rule download_ancestral_alleles:
         steps.download(url, output[0])
 
 
-rule bgzip_ancestral_alleles:
+rule prepare_ancestral_alleles:
     input:
         vcf_dir / "homo_sapiens-chr{chrom}.vcf.gz",
     output:
         vcf_dir / "ancestral_alleles_chr{chrom}.vcf.gz",
     run:
-        steps.bgzip(input[0], output[0])
+        steps.prepare_ancestral_alleles(input[0], output[0], wildcards.chrom)
 
 
 rule index_ancestral_alleles:
@@ -136,17 +141,6 @@ rule explode_tgp:
         steps.explode(input.vcf, output[0], threads)
 
 
-rule encode_tgp:
-    input:
-        exploded_vcf_dir / "tgp_chr{chrom}.icf",
-    output:
-        directory(zarr_vcf_dir / "tgp_chr{chrom}.vcz"),
-    threads:
-        config["worker_processes"]
-    run:
-        steps.encode(input[0], output[0], threads)
-
-
 rule explode_sgdp:
     input:
         bcf=vcf_dir / "chr.sgdp.pub.{chrom}.bcf",
@@ -157,17 +151,6 @@ rule explode_sgdp:
         config["worker_processes"]
     run:
         steps.explode(input.bcf, output[0], threads)
-
-
-rule encode_sgdp:
-    input:
-        exploded_vcf_dir / "sgdp_chr{chrom}.icf",
-    output:
-        directory(zarr_vcf_dir / "sgdp_chr{chrom}.vcz"),
-    threads:
-        config["worker_processes"]
-    run:
-        steps.encode(input[0], output[0], threads)
 
 
 rule explode_ancestral_alleles:
@@ -182,12 +165,24 @@ rule explode_ancestral_alleles:
         steps.explode(input.vcf, output[0], threads)
 
 
-rule encode_ancestral_alleles:
+rule mkschema:
     input:
-        exploded_vcf_dir / "ancestral_alleles_chr{chrom}.icf",
+        exploded_vcf_dir / "{dataset}_chr{chrom}.icf",
     output:
-        directory(zarr_vcf_dir / "ancestral_alleles_chr{chrom}.vcz"),
-    threads:
-        config["worker_processes"]
+        zarr_vcf_dir / "{dataset}_chr{chrom}.schema.json",
+    params:
+        drop_fields=lambda wildcards: config["drop_fields"][wildcards.dataset],
     run:
-        steps.encode(input[0], output[0], threads)
+        steps.make_schema(input[0], output[0], params.drop_fields)
+
+
+rule encode:
+    input:
+        icf=exploded_vcf_dir / "{dataset}_chr{chrom}.icf",
+        schema=zarr_vcf_dir / "{dataset}_chr{chrom}.schema.json",
+    output:
+        directory(zarr_vcf_dir / "{dataset}_chr{chrom}.vcz"),
+    threads: config["worker_processes"]
+    run:
+        steps.encode(input.icf, input.schema, output[0], threads)
+

@@ -1,11 +1,11 @@
 """Implementation functions called by the Snakemake pipeline."""
 
-import gzip
+import json
 import pathlib
-import shutil
 import subprocess
 
 import pysam
+import pysam.bcftools
 
 
 def download(url: str, output: str) -> None:
@@ -27,13 +27,58 @@ def download(url: str, output: str) -> None:
     partial_path.replace(output_path)
 
 
-def bgzip(source: str, output: str) -> None:
-    """Repack a gzip file as block gzip."""
+def prepare_ancestral_alleles(source: str, output: str, chrom: str) -> None:
+    """Reduce the Ensembl variation VCF to one SNV record per position.
+
+    tsinfer requires at most one ancestral-state record at each site. The
+    Ensembl VCF often has several SNV records at a position (one per rsID,
+    some with no ALT allele), which all agree on REF and AA. We keep SNVs that
+    have an AA annotation and merge records at the same position into one
+    multi-allelic record.
+
+    The Ensembl header declares no contigs, which bcftools needs to write BCF,
+    so we first add a ``##contig`` line for ``chrom``.
+    """
     output_path = pathlib.Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with gzip.open(source, "rb") as source_file:
-        with pysam.BGZFile(str(output_path), "wb") as output_file:
-            shutil.copyfileobj(source_file, output_file)
+    header_path = output_path.with_name(f"{output_path.name}.header.txt")
+    with_contig_path = output_path.with_name(f"{output_path.name}.contig.bcf")
+    snvs_path = output_path.with_name(f"{output_path.name}.snvs.bcf")
+    header_path.write_text(f"##contig=<ID={chrom}>\n")
+    pysam.bcftools.annotate(
+        "--header-lines",
+        str(header_path),
+        "--output-type",
+        "u",
+        "--output",
+        str(with_contig_path),
+        source,
+        catch_stdout=False,
+    )
+    pysam.bcftools.view(
+        "--types",
+        "snps",
+        "--include",
+        'INFO/AA!="."',
+        "--output-type",
+        "u",
+        "--output",
+        str(snvs_path),
+        str(with_contig_path),
+        catch_stdout=False,
+    )
+    pysam.bcftools.norm(
+        "--multiallelics",
+        "+snps",
+        "--output-type",
+        "z",
+        "--output",
+        str(output_path),
+        str(snvs_path),
+        catch_stdout=False,
+    )
+    for path in [header_path, with_contig_path, snvs_path]:
+        path.unlink()
 
 
 def index_vcf(vcf: str) -> None:
@@ -57,8 +102,27 @@ def explode(vcf: str, icf: str, worker_processes: int) -> None:
     subprocess.run(command, check=True)
 
 
-def encode(icf: str, vcz: str, worker_processes: int) -> None:
-    """Encode bio2zarr's intermediate format as VCF Zarr."""
+def make_schema(icf: str, schema: str, drop_fields: list[str]) -> None:
+    """Write a VCF Zarr encoding schema that omits ``drop_fields``.
+
+    Large per-call fields that tsinfer never reads (e.g. genotype likelihoods)
+    dominate encode time and output size, so we leave them out.
+    """
+    result = subprocess.run(
+        ["vcf2zarr", "mkschema", icf], check=True, capture_output=True, text=True
+    )
+    schema_dict = json.loads(result.stdout)
+    field_names = {field["name"] for field in schema_dict["fields"]}
+    unknown = set(drop_fields) - field_names
+    if len(unknown) > 0:
+        raise ValueError(f"Fields to drop not in schema: {sorted(unknown)}")
+    kept_fields = [f for f in schema_dict["fields"] if f["name"] not in drop_fields]
+    schema_dict["fields"] = kept_fields
+    pathlib.Path(schema).write_text(json.dumps(schema_dict, indent=2))
+
+
+def encode(icf: str, schema: str, vcz: str, worker_processes: int) -> None:
+    """Encode bio2zarr's intermediate format as VCF Zarr using ``schema``."""
     vcz_path = pathlib.Path(vcz)
     vcz_path.parent.mkdir(parents=True, exist_ok=True)
     command = [
@@ -67,7 +131,10 @@ def encode(icf: str, vcz: str, worker_processes: int) -> None:
         "--no-progress",
         "--worker-processes",
         str(worker_processes),
+        "--schema",
+        schema,
         icf,
         vcz,
     ]
     subprocess.run(command, check=True)
+

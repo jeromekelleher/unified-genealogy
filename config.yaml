@@ -7,3 +7,11 @@ chrom:
   - 20
 
 worker_processes: 18
+
+# Fields left out of the VCF Zarr encoding: large per-call fields that tsinfer
+# does not read.
+drop_fields:
+  tgp: []
+  sgdp: [call_GP, call_PL, call_AD, call_HS, call_DS]
+  ancestral_alleles: []
+
