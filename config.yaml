@@ -15,3 +15,15 @@ drop_fields:
   sgdp: [call_GP, call_PL, call_AD, call_HS, call_DS]
   ancestral_alleles: []
 
+# Region inferred by tsinfer, as a half-open interval of chromosome positions.
+region:
+  start: 10000000
+  end: 11000000
+
+tsinfer:
+  threads: 4
+  # bcftools-style filter applied to every source and the ancestral alleles.
+  site_include: 'TYPE="snp"'
+  max_gap_length: 500000
+  samples_chunk_size: 100
+  variants_chunk_size: 5000

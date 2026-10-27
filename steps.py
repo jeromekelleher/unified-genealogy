@@ -6,6 +6,7 @@ import subprocess
 
 import pysam
 import pysam.bcftools
+import tomli_w
 
 
 def download(url: str, output: str) -> None:
@@ -138,3 +139,88 @@ def encode(icf: str, schema: str, vcz: str, worker_processes: int) -> None:
     ]
     subprocess.run(command, check=True)
 
+
+def write_tsinfer_config(
+    output: str,
+    chrom: str,
+    start: int,
+    end: int,
+    sources: dict[str, str],
+    ancestral_alleles: str,
+    ancestors: pathlib.Path,
+    match_output: pathlib.Path,
+    tsinfer_config: dict,
+) -> None:
+    """Write the tsinfer TOML config for inferring ``chrom:start-end``.
+
+    ``sources`` maps each source name to its VCZ path. Every source is a sample
+    source in the output tree sequence and contributes to ancestor inference.
+    Paths are written as absolute paths because tsinfer resolves relative
+    paths against the config file's directory.
+    """
+    region = f"{chrom}:{start}-{end}"
+    site_include = tsinfer_config["site_include"]
+    source_tables = [
+        {
+            "name": name,
+            "path": str(pathlib.Path(path).resolve()),
+            "regions": region,
+            "include": site_include,
+        }
+        for name, path in sources.items()
+    ]
+    match_sources = {
+        "ancestors": {"node_flags": 0, "create_individuals": False},
+    }
+    for name in sources:
+        match_sources[name] = {"node_flags": 1, "create_individuals": True}
+    toml_dict = {
+        "source": source_tables,
+        "ancestral_state": {
+            "path": str(pathlib.Path(ancestral_alleles).resolve()),
+            "field": "variant_AA",
+            "regions": region,
+            "include": site_include,
+        },
+        "ancestors": [
+            {
+                "name": "ancestors",
+                "path": str(pathlib.Path(ancestors).resolve()),
+                "sources": list(sources),
+                "max_gap_length": tsinfer_config["max_gap_length"],
+                "samples_chunk_size": tsinfer_config["samples_chunk_size"],
+                "variants_chunk_size": tsinfer_config["variants_chunk_size"],
+            }
+        ],
+        "match": {
+            "output": str(pathlib.Path(match_output).resolve()),
+            "sources": match_sources,
+        },
+        "post_process": {"split_ultimate": True, "erase_flanks": True},
+    }
+    output_path = pathlib.Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("wb") as f:
+        tomli_w.dump(toml_dict, f)
+
+
+def run_tsinfer(
+    subcommand: str,
+    config_path: str,
+    threads: int,
+    log_file: str,
+    extra_args: list[str],
+) -> None:
+    """Run a ``tsinfer`` CLI subcommand on ``config_path``."""
+    command = [
+        "tsinfer",
+        subcommand,
+        config_path,
+        "--threads",
+        str(threads),
+        "--verbose",
+        "--log-file",
+        log_file,
+        *extra_args,
+    ]
+    subprocess.run(command, check=True)

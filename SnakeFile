@@ -11,11 +11,16 @@ vcf_dir = data_dir / "vcf"
 exploded_vcf_dir = data_dir / "exploded_vcfs"
 zarr_vcf_dir = data_dir / "zarr_vcfs"
 recombination_map_dir = data_dir / "recomb_map"
+tsinfer_dir = data_dir / "tsinfer"
+# Outputs of one tsinfer run, named by chromosome and region.
+run_dir = tsinfer_dir / "chr{chrom}_{start}_{end}"
 
 
 wildcard_constraints:
     dataset="tgp|sgdp|ancestral_alleles",
     chrom=r"\d+",
+    start=r"\d+",
+    end=r"\d+",
 
 
 rule all:
@@ -27,6 +32,12 @@ rule all:
             chrom=config["chrom"],
         ),
         recombination_map_dir / "plink.GRCh37.map.zip",
+        expand(
+            run_dir / "chr{chrom}_{start}_{end}.trees",
+            chrom=config["chrom"],
+            start=config["region"]["start"],
+            end=config["region"]["end"],
+        ),
 
 
 rule download_tgp_vcf:
@@ -186,3 +197,63 @@ rule encode:
     run:
         steps.encode(input.icf, input.schema, output[0], threads)
 
+
+rule tsinfer_config:
+    input:
+        tgp=zarr_vcf_dir / "tgp_chr{chrom}.vcz",
+        sgdp=zarr_vcf_dir / "sgdp_chr{chrom}.vcz",
+        ancestral_alleles=zarr_vcf_dir / "ancestral_alleles_chr{chrom}.vcz",
+    output:
+        run_dir / "config.toml",
+    run:
+        output_dir = pathlib.Path(output[0]).parent
+        steps.write_tsinfer_config(
+            output[0],
+            chrom=wildcards.chrom,
+            start=int(wildcards.start),
+            end=int(wildcards.end),
+            sources={"tgp": input.tgp, "sgdp": input.sgdp},
+            ancestral_alleles=input.ancestral_alleles,
+            ancestors=output_dir / "ancestors.vcz",
+            match_output=output_dir / "match.trees",
+            tsinfer_config=config["tsinfer"],
+        )
+
+
+rule infer_ancestors:
+    input:
+        run_dir / "config.toml",
+    output:
+        directory(run_dir / "ancestors.vcz"),
+    log:
+        run_dir / "logs" / "infer_ancestors.log",
+    threads: config["tsinfer"]["threads"]
+    run:
+        steps.run_tsinfer("infer-ancestors", input[0], threads, log[0], [])
+
+
+rule match:
+    input:
+        config=run_dir / "config.toml",
+        ancestors=run_dir / "ancestors.vcz",
+    output:
+        run_dir / "match.trees",
+    log:
+        run_dir / "logs" / "match.log",
+    threads: config["tsinfer"]["threads"]
+    run:
+        steps.run_tsinfer("match", input.config, threads, log[0], [])
+
+
+rule post_process:
+    input:
+        config=run_dir / "config.toml",
+        match=run_dir / "match.trees",
+    output:
+        run_dir / "chr{chrom}_{start}_{end}.trees",
+    log:
+        run_dir / "logs" / "post_process.log",
+    threads: config["tsinfer"]["threads"]
+    run:
+        extra_args = ["--input", input.match, "--output", output[0]]
+        steps.run_tsinfer("post-process", input.config, threads, log[0], extra_args)

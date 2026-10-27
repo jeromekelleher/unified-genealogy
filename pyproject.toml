@@ -7,5 +7,10 @@ dependencies = [
     "bio2zarr[vcf]==0.1.8",
     "pysam",
     "snakemake>=9",
+    "tomli-w",
+    "tsinfer",
     "zarr==3.1.5",
 ]
+
+[tool.uv.sources]
+tsinfer = { path = "../..", editable = true }
