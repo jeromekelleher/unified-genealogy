@@ -8,7 +8,7 @@ The datasets are aligned to the GRCh37 reference, as previously, because there i
 
 ```bash
 uv sync
-uv run snakemake -s SnakeFile --cores 4
+uv run snakemake --cores 4
 ```
 
 The chromosomes, the region to infer and the tsinfer settings are set in
