@@ -13,8 +13,9 @@ chromosomes specified in its config.yaml from the source URLs specified there,
 runs bio2zarr to convert them into the right format for tsinfer 1.0, and then
 runs tsinfer (infer-ancestors, match, post-process) on the region given in
 config.yaml. The tsinfer TOML config is generated from config.yaml by the
-pipeline. tsinfer is installed from the local checkout two directories up
-(see pyproject.toml).
+pipeline. tsinfer is installed from the main branch of
+https://github.com/tskit-dev/tsinfer (see pyproject.toml); run
+`uv lock --upgrade-package tsinfer` to update to the latest commit.
 
 The snakemake architecture should take inspiration from
 https://github.com/benjeffery/tsinfer-snakemake/, although bear in mind this is

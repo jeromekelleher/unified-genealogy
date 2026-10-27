@@ -13,4 +13,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-tsinfer = { path = "../..", editable = true }
+tsinfer = { git = "https://github.com/tskit-dev/tsinfer", branch = "main" }

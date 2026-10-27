@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -1114,7 +1114,8 @@ wheels = [
 
 [[package]]
 name = "tsinfer"
-source = { editable = "../../" }
+version = "0.5.2.dev331"
+source = { git = "https://github.com/tskit-dev/tsinfer?branch=main#d9653716c7c80b024e55f067211b8bec0478bb96" }
 dependencies = [
     { name = "bio2zarr" },
     { name = "click" },
@@ -1128,79 +1129,6 @@ dependencies = [
     { name = "vcztools" },
     { name = "zarr" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "bio2zarr" },
-    { name = "click" },
-    { name = "daiquiri" },
-    { name = "humanize" },
-    { name = "numba" },
-    { name = "numpy", specifier = ">=2" },
-    { name = "psutil" },
-    { name = "tqdm" },
-    { name = "tskit", specifier = ">=1.0.0" },
-    { name = "vcztools", specifier = ">=0.2" },
-    { name = "zarr", specifier = ">=3" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bio2zarr", extras = ["tskit"] },
-    { name = "bio2zarr", extras = ["tskit", "vcf"] },
-    { name = "clang-format", specifier = "==21.1.8" },
-    { name = "humanize" },
-    { name = "ipywidgets" },
-    { name = "jupyter-book", specifier = "<2" },
-    { name = "msprime" },
-    { name = "pandas" },
-    { name = "prek", specifier = "==0.3.3" },
-    { name = "pyfaidx" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-xdist" },
-    { name = "ruff", specifier = "==0.15.1" },
-    { name = "setuptools" },
-    { name = "sphinx-book-theme" },
-    { name = "sphinx-click" },
-    { name = "sphinx-issues" },
-    { name = "twine" },
-    { name = "validate-pyproject", extras = ["all"] },
-    { name = "xarray" },
-    { name = "zizmor", specifier = "==1.26.1" },
-]
-docs = [
-    { name = "bio2zarr", extras = ["tskit", "vcf"] },
-    { name = "humanize" },
-    { name = "ipywidgets" },
-    { name = "jupyter-book", specifier = "<2" },
-    { name = "msprime" },
-    { name = "pyfaidx" },
-    { name = "sphinx-book-theme" },
-    { name = "sphinx-click" },
-    { name = "sphinx-issues" },
-]
-lint = [
-    { name = "clang-format", specifier = "==21.1.8" },
-    { name = "prek", specifier = "==0.3.3" },
-    { name = "ruff", specifier = "==0.15.1" },
-    { name = "zizmor", specifier = "==1.26.1" },
-]
-packaging = [
-    { name = "twine" },
-    { name = "validate-pyproject", extras = ["all"] },
-]
-test = [
-    { name = "bio2zarr", extras = ["tskit"] },
-    { name = "msprime" },
-    { name = "pandas" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-xdist" },
-    { name = "setuptools" },
-    { name = "xarray" },
-]
-wheels = [{ name = "cibuildwheel" }]
 
 [[package]]
 name = "tskit"
@@ -1275,7 +1203,7 @@ requires-dist = [
     { name = "pysam" },
     { name = "snakemake", specifier = ">=9" },
     { name = "tomli-w" },
-    { name = "tsinfer", editable = "../../" },
+    { name = "tsinfer", git = "https://github.com/tskit-dev/tsinfer?branch=main" },
     { name = "zarr", specifier = "==3.1.5" },
 ]
 
